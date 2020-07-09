@@ -3,12 +3,10 @@
 //Who can snag the bigger half of the wishbone and be the victor?
 //long press the center of the wishbone to become the "crown"
 
-//test
-
 #define BADRED makeColorHSB(8, 255, 230)
 #define GOODGREEN makeColorHSB(69, 255, 255)
-#define CROWNGREEN makeColorHSB(56, 255, 255)
 #define BONEBLUE makeColorHSB(200, 255, 150)
+#define CROWNGREEN 56
 
 enum blinkRoles {LEG, CROWN};
 byte blinkRole = LEG;
@@ -29,8 +27,18 @@ byte legTouchingFace;
 bool bWin;
 byte faceCount;
 
+#define SPINLENGTH 250
+Timer spinTimer;
+
+  
+byte spinFace;
+byte spinFace2;
+
 void setup() {
   // put your setup code here, to run once:
+
+spinTimer.set(SPINLENGTH);
+spinFace = 0;
 
 }
 
@@ -97,7 +105,7 @@ void legLoop() {
 
       if (getLastValueReceivedOnFace(f) == IM_LEG) { //am I touching a leg?
 
-        legTouchingFace = f; //saving this face for later reference
+      legTouchingFace = f; //save this for later reference
       }
 
       if (getLastValueReceivedOnFace(f) == INERT) {
@@ -147,10 +155,7 @@ void legLoop() {
     setColor(BADRED);
   }
 
-
 }
-
-
 
 
 //CROWN BEHAVIOR -------------------------------
@@ -176,19 +181,15 @@ void crownLoop() {
 
     if (faceCount >= 2) { //If I'm touching 2 (or more) faces, business as usual
       setColor(BLUE);
-      boneColor();
+      boneColor(); 
       setValueSentOnAllFaces(IM_CROWN);
     }
 
     if (faceCount == 1) { //if I'm touching one face, then that face will be told it's the winner
-      setColor(CROWNGREEN);
+      setColor(GOODGREEN);
 
-      setColorOnFace(CROWNGREEN, 0);
-      setColorOnFace(GOODGREEN, 1);
-      setColorOnFace(CROWNGREEN, 2);
-      setColorOnFace(GOODGREEN, 3);
-      setColorOnFace(CROWNGREEN, 4);
-      setColorOnFace(GOODGREEN, 5);
+        crownSpin(); //call the spinning animation here 
+
 
       setValueSentOnAllFaces(WIN);
     }
@@ -201,8 +202,10 @@ void crownLoop() {
 
 }
 
+//ALL GRAPHICS, ANIMATIONS, AND DETAILS -------------------------------
 
-void boneColor() {
+
+void boneColor() { //connecting bone pieces
   FOREACH_FACE(f) {
     if (!isValueReceivedOnFaceExpired(f)) {
       setColorOnFace(WHITE, f);
@@ -210,26 +213,31 @@ void boneColor() {
   }
 }
 
-void endBone() {
+void endBone() { //end bone decoration 
 
   setColor(WHITE);
 
-
   FOREACH_FACE(f) {
-    if (!isValueReceivedOnFaceExpired(f)) {
-
-      legTouchingFace = f;
-
+    if (!isValueReceivedOnFaceExpired(f)) { 
+      legTouchingFace = f; //figure out which face is touching another leg blink
     }
-
   }
 
-
-  byte boneEnd1 = legTouchingFace + 3 % 6;
-
-
-  setColorOnFace(BONEBLUE, boneEnd1);
-
-
-
+  byte boneEnd = (legTouchingFace + 3) % 6; //declare the face that is the opposite face on the Blink
+  setColorOnFace(BONEBLUE, boneEnd); //we want to make that face blue, and leave the rest white
 }
+
+void crownSpin() { //when the crown declares a winner, it spins like this
+
+    byte saturation = 0;
+    if(!spinTimer.isExpired()){
+    byte timerProgress = spinTimer.getRemaining();
+    saturation = map(timerProgress, 0, SPINLENGTH, 0, 255);
+      } else if (spinTimer.isExpired()) {
+        spinFace = (spinFace + 1) % 6;
+        spinFace2 = (spinFace + 3) % 6;
+        spinTimer.set(SPINLENGTH);
+        }
+      setColorOnFace(makeColorHSB(CROWNGREEN, saturation, 255), spinFace);
+      setColorOnFace(makeColorHSB(CROWNGREEN, saturation, 255), spinFace2);
+  }
